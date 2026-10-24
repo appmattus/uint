@@ -38,7 +38,17 @@ internal fun uint128Minus(v1: UInt128, v2: UInt128): UInt128 {
     return UInt128(v1.upper - v2.upper - borrow, v1.lower - v2.lower)
 }
 
-internal fun uint128Times(v1: UInt128, v2: UInt128): UInt128 {
+/** Multiplies two values, using the platform's native 128-bit integer support where available. */
+internal expect fun uint128Times(v1: UInt128, v2: UInt128): UInt128
+
+/**
+ * Returns either the quotient or the [remainder] of [dividend] divided by [divisor], using the platform's native
+ * 128-bit integer support where available. Only called once the divisor is known to be non-zero, the dividend is at
+ * least the divisor, and at least one of them doesn't fit in a [ULong].
+ */
+internal expect fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128
+
+internal fun uint128TimesPortable(v1: UInt128, v2: UInt128): UInt128 {
     // The cross terms only contribute to the upper word, so their overflow can be discarded
     val upper = multiplyHigh(v1.lower, v2.lower) + v1.lower * v2.upper + v1.upper * v2.lower
     return UInt128(upper, v1.lower * v2.lower)
@@ -64,11 +74,7 @@ internal fun uint128Div(dividend: UInt128, divisor: UInt128): UInt128 = uint128D
 
 internal fun uint128Rem(dividend: UInt128, divisor: UInt128): UInt128 = uint128DivRem(dividend, divisor, remainder = true)
 
-/**
- * Returns either the quotient or the [remainder] of [dividend] divided by [divisor] using Knuth's Algorithm D
- * (The Art of Computer Programming, Vol. 2, 4.3.1) on 32-bit limbs.
- */
-@Suppress("ReturnCount", "LongMethod", "ComplexMethod", "NestedBlockDepth")
+@Suppress("ReturnCount")
 private fun uint128DivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
     if (divisor.upper == 0uL) {
         if (divisor.lower == 0uL) throw ArithmeticException("/ by zero")
@@ -81,6 +87,15 @@ private fun uint128DivRem(dividend: UInt128, divisor: UInt128, remainder: Boolea
         return if (remainder) dividend else UInt128.ZERO
     }
 
+    return uint128PlatformDivRem(dividend, divisor, remainder)
+}
+
+/**
+ * Returns either the quotient or the [remainder] of [dividend] divided by [divisor] using Knuth's Algorithm D
+ * (The Art of Computer Programming, Vol. 2, 4.3.1) on 32-bit limbs.
+ */
+@Suppress("LongMethod", "ComplexMethod", "NestedBlockDepth")
+internal fun uint128DivRemPortable(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
     val u = dividend.toLimbs()
     val v = divisor.toLimbs()
     val m = LIMB_COUNT - dividend.countLeadingZeroBits() / LIMB_BITS

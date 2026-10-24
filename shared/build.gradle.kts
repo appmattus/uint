@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     kotlin("multiplatform")
@@ -8,7 +9,7 @@ plugins {
 kotlin {
     jvm {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_1_8)
+            jvmTarget.set(JvmTarget.JVM_11)
         }
     }
 
@@ -64,9 +65,29 @@ kotlin {
         }
     }
 
+    // Platforms without native 128-bit integer support share the portable Kotlin implementation
+    applyDefaultHierarchyTemplate {
+        common {
+            group("portable") {
+                withJs()
+                withWasmJs()
+                withWasmWasi()
+                withLinux()
+                withMingw()
+                withAndroidNative()
+            }
+        }
+    }
+
+    // Apple targets use clang's unsigned __int128, the same LLVM i128 type that backs Swift's UInt128
+    targets.withType<KotlinNativeTarget>().matching { it.konanTarget.family.isAppleFamily }.configureEach {
+        compilations.getByName("main").cinterops.create("uint128")
+    }
+
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
     }
 }
+
