@@ -58,7 +58,7 @@ public inline fun UInt128.takeLowestOneBit(): UInt128 =
  * `number.rotateLeft(n) == number.rotateLeft(n % 128)`
  */
 public inline fun UInt128.rotateLeft(bitCount: Int): UInt128 =
-    (this shl (bitCount and 127)) or (this shr 128 - (bitCount and 127))
+    (this shl bitCount) or (this shr -bitCount)
 
 /**
  * Rotates the binary representation of this [UInt128] number right by the specified [bitCount] number of bits.
@@ -71,4 +71,4 @@ public inline fun UInt128.rotateLeft(bitCount: Int): UInt128 =
  * `number.rotateRight(n) == number.rotateRight(n % 128)`
  */
 public inline fun UInt128.rotateRight(bitCount: Int): UInt128 =
-    (this shr (bitCount and 127)) or (this shl 128 - (bitCount and 127))
+    (this shr bitCount) or (this shl -bitCount)

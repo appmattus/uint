@@ -22,11 +22,11 @@ internal actual fun uint128Times(v1: UInt128, v2: UInt128): UInt128 {
     return UInt128(upper.toULong(), v1.lower * v2.lower)
 }
 
-internal actual fun uint128PlatformDivMod(dividend: UInt128, divisor: UInt128): Pair<UInt128, UInt128> {
-    if (!NativeUInt128.isAvailable) return uint128DivModPortable(dividend, divisor)
-    val out = LongArray(4)
-    NativeUInt128.divMod(
-        dividend.upper.toLong(), dividend.lower.toLong(), divisor.upper.toLong(), divisor.lower.toLong(), out
+internal actual fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
+    if (!NativeUInt128.isAvailable) return uint128DivRemPortable(dividend, divisor, remainder)
+    val out = LongArray(2)
+    NativeUInt128.divRem(
+        dividend.upper.toLong(), dividend.lower.toLong(), divisor.upper.toLong(), divisor.lower.toLong(), remainder, out
     )
-    return Pair(UInt128(out[0].toULong(), out[1].toULong()), UInt128(out[2].toULong(), out[3].toULong()))
+    return UInt128(out[0].toULong(), out[1].toULong())
 }

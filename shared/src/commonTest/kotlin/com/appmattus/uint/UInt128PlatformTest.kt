@@ -42,15 +42,19 @@ class UInt128PlatformTest {
     }
 
     @Test
-    fun divModMatchesPortableImplementation() {
+    fun divRemMatchesPortableImplementation() {
         repeat(10_000) {
-            val a = randomUInt128()
-            val b = randomUInt128().takeIf { it != UInt128.ZERO } ?: UInt128.ONE
-            assertMatches(uint128DivModPortable(a, b), uint128PlatformDivMod(a, b)) { "$a / $b" }
+            // uint128PlatformDivRem requires a non-zero divisor no larger than the dividend
+            val x = randomUInt128()
+            val y = randomUInt128().takeIf { it != UInt128.ZERO } ?: UInt128.ONE
+            val a = maxOf(x, y)
+            val b = minOf(x, y)
+            assertMatches(uint128DivRemPortable(a, b, false), uint128PlatformDivRem(a, b, false)) { "$a / $b" }
+            assertMatches(uint128DivRemPortable(a, b, true), uint128PlatformDivRem(a, b, true)) { "$a % $b" }
         }
     }
 
-    // Only builds the message on failure, as toString is expensive with the portable implementation
+    // Only builds the message on failure, to keep the loop cheap on slower platforms
     private fun <T> assertMatches(expected: T, actual: T, message: () -> String) {
         if (expected != actual) assertEquals(expected, actual, message())
     }

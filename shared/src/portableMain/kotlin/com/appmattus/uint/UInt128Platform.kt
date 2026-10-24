@@ -18,5 +18,5 @@ package com.appmattus.uint
 
 internal actual fun uint128Times(v1: UInt128, v2: UInt128): UInt128 = uint128TimesPortable(v1, v2)
 
-internal actual fun uint128PlatformDivMod(dividend: UInt128, divisor: UInt128): Pair<UInt128, UInt128> =
-    uint128DivModPortable(dividend, divisor)
+internal actual fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 =
+    uint128DivRemPortable(dividend, divisor, remainder)

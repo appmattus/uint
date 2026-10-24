@@ -70,6 +70,10 @@ class UInt128StringsTest {
 
         assertNotNull("fedcba9876543210fedcba9876543210".toUInt128OrNull(16))
         assertNull("1fedcba9876543210fedcba9876543210".toUInt128OrNull(16))
+
+        // Upper case digits are accepted, matching ULong
+        assertEquals(expected, "FEDCBA9876543210FEDCBA9876543210".toUInt128(16))
+        assertEquals(255u.toUInt128(), "Ff".toUInt128(16))
     }
 
     @Test

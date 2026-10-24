@@ -49,7 +49,7 @@ internal object NativeUInt128 {
     @JvmStatic
     external fun mulHigh(aHi: Long, aLo: Long, bHi: Long, bLo: Long): Long
 
-    /** Writes { quotient upper, quotient lower, remainder upper, remainder lower } of a / b into out. */
+    /** Writes { upper, lower } of either the quotient or the remainder of a / b into out. */
     @JvmStatic
-    external fun divMod(aHi: Long, aLo: Long, bHi: Long, bLo: Long, out: LongArray)
+    external fun divRem(aHi: Long, aLo: Long, bHi: Long, bLo: Long, remainder: Boolean, out: LongArray)
 }
