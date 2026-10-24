@@ -26,10 +26,6 @@ internal actual fun uint64MultiplyHigh(x: ULong, y: ULong): ULong {
     return (Math.multiplyHigh(sx, sy) + ((sx shr 63) and sy) + ((sy shr 63) and sx)).toULong()
 }
 
-// There's no JVM intrinsic for 128-bit division, and 64-bit division already compiles to Long.divideUnsigned
-internal actual fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 =
-    uint128DivRemPortable(dividend, divisor, remainder)
-
 // Kotlin compiles ULong division to Long.divideUnsigned, which before Java 17 falls back to BigInteger whenever the
 // dividend has its top bit set. Being a static final, the JIT folds this check away.
 private val hasFastDivideUnsigned: Boolean = Runtime.version().feature() >= 17

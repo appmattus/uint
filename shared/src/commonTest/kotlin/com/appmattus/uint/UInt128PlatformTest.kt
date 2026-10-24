@@ -43,19 +43,6 @@ class UInt128PlatformTest {
     }
 
     @Test
-    fun divRemMatchesPortableImplementation() {
-        repeat(10_000) {
-            // uint128PlatformDivRem requires a non-zero divisor no larger than the dividend
-            val x = randomUInt128()
-            val y = randomUInt128().takeIf { it != UInt128.ZERO } ?: UInt128.ONE
-            val a = maxOf(x, y)
-            val b = minOf(x, y)
-            assertMatches(uint128DivRemPortable(a, b, false), uint128PlatformDivRem(a, b, false)) { "$a / $b" }
-            assertMatches(uint128DivRemPortable(a, b, true), uint128PlatformDivRem(a, b, true)) { "$a % $b" }
-        }
-    }
-
-    @Test
     fun divRemSatisfiesDivisionIdentity() {
         repeat(10_000) {
             // Dividends just either side of a multiple of the divisor exercise the quotient estimate's corrections

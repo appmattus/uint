@@ -68,13 +68,6 @@ internal expect fun uint64Divide(dividend: ULong, divisor: ULong): ULong
 /** Returns [dividend] % [divisor], working around slow unsigned division on some platforms. */
 internal expect fun uint64Remainder(dividend: ULong, divisor: ULong): ULong
 
-/**
- * Returns either the quotient or the [remainder] of [dividend] divided by [divisor], using the platform's native
- * 128-bit integer support where available. Only called once the divisor is known to be non-zero, the dividend is at
- * least the divisor, and at least one of them doesn't fit in a [ULong].
- */
-internal expect fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128
-
 internal fun uint128Div(dividend: UInt128, divisor: UInt128): UInt128 = uint128DivRem(dividend, divisor, remainder = false)
 
 internal fun uint128Rem(dividend: UInt128, divisor: UInt128): UInt128 = uint128DivRem(dividend, divisor, remainder = true)
@@ -96,14 +89,16 @@ private fun uint128DivRem(dividend: UInt128, divisor: UInt128, remainder: Boolea
         return if (remainder) dividend else UInt128.ZERO
     }
 
-    return uint128PlatformDivRem(dividend, divisor, remainder)
+    return uint128DivRemWords(dividend, divisor, remainder)
 }
 
 /**
  * Returns either the quotient or the [remainder] of [dividend] divided by [divisor] using only 64-bit arithmetic, so
  * nothing is allocated beyond the result. Follows the word division in Hacker's Delight (2nd ed., 9-4 and 9-5).
+ * Only called once the divisor is known to be non-zero, the dividend is at least the divisor, and at least one of them
+ * doesn't fit in a [ULong].
  */
-internal fun uint128DivRemPortable(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
+private fun uint128DivRemWords(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
     if (divisor.upper == 0uL) {
         // Divide the upper word first, leaving a remainder below the divisor so the second step can't overflow
         val d = divisor.lower
