@@ -37,6 +37,7 @@ The following operations are supported:
 
 ## Getting started
 
+![badge][badge-android]
 ![badge][badge-ios]
 ![badge][badge-watchos]
 ![badge][badge-tvos]
@@ -120,6 +121,7 @@ under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 
+[badge-android]: http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat
 [badge-ios]: http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat
 [badge-js]: http://img.shields.io/badge/platform-js-F8DB5D.svg?style=flat
 [badge-jvm]: http://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat
