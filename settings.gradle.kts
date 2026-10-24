@@ -13,3 +13,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "UInt"
 include(":shared")
+include(":benchmark")

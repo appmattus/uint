@@ -32,7 +32,13 @@ internal fun uint128Plus(v1: UInt128, v2: UInt128): UInt128 {
     return UInt128(partial3.toUInt(), partial2.toUInt(), partial1.toUInt(), partial0.toUInt())
 }
 
-internal fun uint128Times(v1: UInt128, v2: UInt128): UInt128 {
+/** Multiplies two values, using the platform's native 128-bit integer support where available. */
+internal expect fun uint128Times(v1: UInt128, v2: UInt128): UInt128
+
+/** Divides two values returning the quotient and remainder, using native 128-bit support where available. */
+internal expect fun uint128PlatformDivMod(dividend: UInt128, divisor: UInt128): Pair<UInt128, UInt128>
+
+internal fun uint128TimesPortable(v1: UInt128, v2: UInt128): UInt128 {
     // multiply each component of the values
     val ll = v1.low.toULong() * v2.low.toULong()
     val mll = v1.midLow.toULong() * v2.low.toULong()
@@ -84,6 +90,10 @@ internal fun uint128DivMod(dividend: UInt128, divisor: UInt128): Pair<UInt128, U
         return Pair(UInt128.ZERO, dividend)
     }
 
+    return uint128PlatformDivMod(dividend, divisor)
+}
+
+internal fun uint128DivModPortable(dividend: UInt128, divisor: UInt128): Pair<UInt128, UInt128> {
     var qrFirst = UInt128.ZERO
     var qrSecond = UInt128.ZERO
     for (x in (UInt128.SIZE_BITS - dividend.countLeadingZeroBits()) downTo 1) {
