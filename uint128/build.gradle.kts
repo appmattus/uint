@@ -2,7 +2,8 @@ import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("multiplatform")
+    alias(libs.plugins.kotlin.multiplatform)
+    id(libs.plugins.gradleMavenPublishPlugin.get().pluginId)
 }
 
 kotlin {

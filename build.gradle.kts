@@ -1,4 +1,9 @@
 plugins {
-    //trick: for the same plugin versions in all sub-modules
-    kotlin("multiplatform").version("2.4.21").apply(false)
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.gradleMavenPublishPlugin) apply false
+}
+
+subprojects {
+    version = (System.getenv("GITHUB_REF") ?: System.getProperty("GITHUB_REF"))
+        ?.replaceFirst("refs/tags/", "") ?: "unspecified"
 }
