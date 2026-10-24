@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [ main ]
+    tags: [ '**' ]
   pull_request:
   workflow_dispatch:
 
@@ -40,3 +41,35 @@ jobs:
       - name: Compile
         shell: bash
         run: ./gradlew assemble
+
+  release:
+    name: Release to Maven Central
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ build ]
+    # The Apple targets can only be built on macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'gradle.properties') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Prepare tag properties
+        run: |
+          echo "${{secrets.GPG_SIGNING_SECRET_KEY_RING_FILE_BASE64}}" > $HOME/.gradle/sonatype-appmattus-keys.gpg.b64
+          base64 -d -i $HOME/.gradle/sonatype-appmattus-keys.gpg.b64 -o $HOME/.gradle/sonatype-appmattus-keys.gpg
+          echo "${{secrets.PUBLISHING_GRADLE_PROPERTIES}}" > $HOME/.gradle/gradle.properties
+
+      - name: Upload tag
+        run: ./gradlew publishAndReleaseToMavenCentral -Psigning.secretKeyRingFile=$(echo ~/.gradle/sonatype-appmattus-keys.gpg)
