@@ -74,9 +74,12 @@ private fun measure(op: (Int) -> Unit): Double {
     return best
 }
 
-fun runBenchmarks() {
-    println("benchmark,ns/op")
-    benchmarks.forEach { (name, op) ->
+/** The names of all benchmarks, in the order they run. */
+val benchmarkNames: List<String> = benchmarks.map { it.first }
+
+/** Runs the [names] benchmarks in this process, printing one `name,ns/op` line for each. */
+fun runBenchmarks(names: List<String> = benchmarkNames) {
+    benchmarks.filter { it.first in names }.forEach { (name, op) ->
         println("$name,${(measure(op) * 100).toLong() / 100.0}")
     }
     println("# sink $sink")

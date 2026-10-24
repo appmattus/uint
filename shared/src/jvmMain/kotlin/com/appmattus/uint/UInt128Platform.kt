@@ -16,17 +16,23 @@
 
 package com.appmattus.uint
 
+// HotSpot compiles Math.multiplyHigh to a single high-multiply instruction (smulh on arm64, imul on x86-64)
 internal actual fun uint128Times(v1: UInt128, v2: UInt128): UInt128 {
-    if (!NativeUInt128.isAvailable) return uint128TimesPortable(v1, v2)
-    val upper = NativeUInt128.mulHigh(v1.upper.toLong(), v1.lower.toLong(), v2.upper.toLong(), v2.lower.toLong())
-    return UInt128(upper.toULong(), v1.lower * v2.lower)
+    // The cross terms only contribute to the upper word, so their overflow can be discarded
+    val high = unsignedMultiplyHigh(v1.lower, v2.lower) + v1.lower * v2.upper + v1.upper * v2.lower
+    return UInt128(high, v1.lower * v2.lower)
 }
 
-internal actual fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
-    if (!NativeUInt128.isAvailable) return uint128DivRemPortable(dividend, divisor, remainder)
-    val out = LongArray(2)
-    NativeUInt128.divRem(
-        dividend.upper.toLong(), dividend.lower.toLong(), divisor.upper.toLong(), divisor.lower.toLong(), remainder, out
-    )
-    return UInt128(out[0].toULong(), out[1].toULong())
+/**
+ * Returns the upper 64 bits of the unsigned 128-bit product of [x] and [y], correcting the signed result of
+ * [Math.multiplyHigh] for operands with their top bit set, as Java 18's Math.unsignedMultiplyHigh does.
+ */
+internal fun unsignedMultiplyHigh(x: ULong, y: ULong): ULong {
+    val sx = x.toLong()
+    val sy = y.toLong()
+    return (Math.multiplyHigh(sx, sy) + ((sx shr 63) and sy) + ((sy shr 63) and sx)).toULong()
 }
+
+// There's no JVM intrinsic for 128-bit division, and 64-bit division already compiles to Long.divideUnsigned
+internal actual fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 =
+    uint128DivRemPortable(dividend, divisor, remainder)

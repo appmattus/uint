@@ -7,7 +7,7 @@ plugins {
 kotlin {
     jvm {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_1_8)
+            jvmTarget.set(JvmTarget.JVM_11)
         }
     }
 
@@ -24,10 +24,12 @@ kotlin {
     }
 }
 
-// Runs the JVM benchmark; pass -Pnative=false to force the portable implementation
-val jvmBenchmark by tasks.registering(JavaExec::class) {
+// Runs the JVM benchmark, forking a JVM per benchmark; pass -PjavaVersion=11 (or 17, 21, ...) to run it on a specific JDK
+tasks.register<JavaExec>("jvmBenchmark") {
     val compilation = kotlin.jvm().compilations.getByName("main")
     classpath(compilation.output.allOutputs, compilation.runtimeDependencyFiles)
     mainClass.set("com.appmattus.uint.benchmark.MainKt")
-    systemProperty("com.appmattus.uint.native", providers.gradleProperty("native").getOrElse("true"))
+    providers.gradleProperty("javaVersion").orNull?.let { version ->
+        javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(version)) })
+    }
 }

@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-package com.appmattus.uint
+package com.appmattus.uint.benchmark
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
-class NativeUInt128Test {
-
-    @Test
-    fun nativeLibraryLoadsOnlyOnMac() {
-        val isMac = System.getProperty("os.name").startsWith("Mac", ignoreCase = true)
-        assertEquals(isMac, NativeUInt128.isAvailable)
-    }
+fun main() {
+    println("benchmark,ns/op")
+    runBenchmarks()
 }
