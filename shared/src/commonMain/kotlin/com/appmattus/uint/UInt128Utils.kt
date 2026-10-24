@@ -15,9 +15,8 @@
  */
 package com.appmattus.uint
 
-private const val LIMB_MASK: ULong = 0xFFFFFFFFu
-private const val LIMB_BITS: Int = UInt.SIZE_BITS
-private const val LIMB_COUNT: Int = UInt128.SIZE_BITS / LIMB_BITS
+private const val HALF_MASK: ULong = 0xFFFFFFFFu
+private const val HALF_BITS: Int = UInt.SIZE_BITS
 
 internal fun uint128Compare(v1: UInt128, v2: UInt128): Int {
     val cmp = v1.upper.compareTo(v2.upper)
@@ -38,37 +37,36 @@ internal fun uint128Minus(v1: UInt128, v2: UInt128): UInt128 {
     return UInt128(v1.upper - v2.upper - borrow, v1.lower - v2.lower)
 }
 
-/** Multiplies two values, using the platform's native 128-bit integer support where available. */
-internal expect fun uint128Times(v1: UInt128, v2: UInt128): UInt128
-
-/**
- * Returns either the quotient or the [remainder] of [dividend] divided by [divisor], using the platform's native
- * 128-bit integer support where available. Only called once the divisor is known to be non-zero, the dividend is at
- * least the divisor, and at least one of them doesn't fit in a [ULong].
- */
-internal expect fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128
-
-internal fun uint128TimesPortable(v1: UInt128, v2: UInt128): UInt128 {
+internal fun uint128Times(v1: UInt128, v2: UInt128): UInt128 {
     // The cross terms only contribute to the upper word, so their overflow can be discarded
-    val upper = multiplyHigh(v1.lower, v2.lower) + v1.lower * v2.upper + v1.upper * v2.lower
+    val upper = uint64MultiplyHigh(v1.lower, v2.lower) + v1.lower * v2.upper + v1.upper * v2.lower
     return UInt128(upper, v1.lower * v2.lower)
 }
 
+/** Returns the upper 64 bits of the 128-bit product of [x] and [y], using a platform intrinsic where available. */
+internal expect fun uint64MultiplyHigh(x: ULong, y: ULong): ULong
+
 /** Returns the upper 64 bits of the 128-bit product of [x] and [y]. */
-private fun multiplyHigh(x: ULong, y: ULong): ULong {
-    val x0 = x and LIMB_MASK
-    val x1 = x shr LIMB_BITS
-    val y0 = y and LIMB_MASK
-    val y1 = y shr LIMB_BITS
+internal fun uint64MultiplyHighPortable(x: ULong, y: ULong): ULong {
+    val x0 = x and HALF_MASK
+    val x1 = x shr HALF_BITS
+    val y0 = y and HALF_MASK
+    val y1 = y shr HALF_BITS
 
     val p00 = x0 * y0
     val p01 = x0 * y1
     val p10 = x1 * y0
     val p11 = x1 * y1
 
-    val middle = (p00 shr LIMB_BITS) + (p01 and LIMB_MASK) + (p10 and LIMB_MASK)
-    return p11 + (p01 shr LIMB_BITS) + (p10 shr LIMB_BITS) + (middle shr LIMB_BITS)
+    val middle = (p00 shr HALF_BITS) + (p01 and HALF_MASK) + (p10 and HALF_MASK)
+    return p11 + (p01 shr HALF_BITS) + (p10 shr HALF_BITS) + (middle shr HALF_BITS)
 }
+
+/** Returns [dividend] / [divisor], working around slow unsigned division on some platforms. */
+internal expect fun uint64Divide(dividend: ULong, divisor: ULong): ULong
+
+/** Returns [dividend] % [divisor], working around slow unsigned division on some platforms. */
+internal expect fun uint64Remainder(dividend: ULong, divisor: ULong): ULong
 
 internal fun uint128Div(dividend: UInt128, divisor: UInt128): UInt128 = uint128DivRem(dividend, divisor, remainder = false)
 
@@ -79,7 +77,11 @@ private fun uint128DivRem(dividend: UInt128, divisor: UInt128, remainder: Boolea
     if (divisor.upper == 0uL) {
         if (divisor.lower == 0uL) throw ArithmeticException("/ by zero")
         if (dividend.upper == 0uL) {
-            val result = if (remainder) dividend.lower % divisor.lower else dividend.lower / divisor.lower
+            val result = if (remainder) {
+                uint64Remainder(dividend.lower, divisor.lower)
+            } else {
+                uint64Divide(dividend.lower, divisor.lower)
+            }
             return UInt128(0uL, result)
         }
     }
@@ -87,111 +89,85 @@ private fun uint128DivRem(dividend: UInt128, divisor: UInt128, remainder: Boolea
         return if (remainder) dividend else UInt128.ZERO
     }
 
-    return uint128PlatformDivRem(dividend, divisor, remainder)
+    return uint128DivRemWords(dividend, divisor, remainder)
 }
 
 /**
- * Returns either the quotient or the [remainder] of [dividend] divided by [divisor] using Knuth's Algorithm D
- * (The Art of Computer Programming, Vol. 2, 4.3.1) on 32-bit limbs.
+ * Returns either the quotient or the [remainder] of [dividend] divided by [divisor] using only 64-bit arithmetic, so
+ * nothing is allocated beyond the result. Follows the word division in Hacker's Delight (2nd ed., 9-4 and 9-5).
+ * Only called once the divisor is known to be non-zero, the dividend is at least the divisor, and at least one of them
+ * doesn't fit in a [ULong].
  */
-@Suppress("LongMethod", "ComplexMethod", "NestedBlockDepth")
-internal fun uint128DivRemPortable(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
-    val u = dividend.toLimbs()
-    val v = divisor.toLimbs()
-    val m = LIMB_COUNT - dividend.countLeadingZeroBits() / LIMB_BITS
-    val n = LIMB_COUNT - divisor.countLeadingZeroBits() / LIMB_BITS
-    val q = IntArray(LIMB_COUNT)
-
-    if (n == 1) {
-        // Short division by a single limb
-        val d = v[0].toULimb()
-        var r = 0uL
-        for (j in m - 1 downTo 0) {
-            val current = (r shl LIMB_BITS) or u[j].toULimb()
-            q[j] = (current / d).toInt()
-            r = current % d
-        }
-        return if (remainder) UInt128(0uL, r) else q.toUInt128()
+private fun uint128DivRemWords(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
+    if (divisor.upper == 0uL) {
+        // Divide the upper word first, leaving a remainder below the divisor so the second step can't overflow
+        val d = divisor.lower
+        val upperQuotient = uint64Divide(dividend.upper, d)
+        val lowerQuotient = divideWide(dividend.upper - upperQuotient * d, dividend.lower, d)
+        // The remainder is below the divisor, so only its lower word survives the wrapping subtraction
+        return if (remainder) UInt128(0uL, dividend.lower - lowerQuotient * d) else UInt128(upperQuotient, lowerQuotient)
     }
 
-    // Normalise so the most significant limb of the divisor has its top bit set
-    val s = v[n - 1].countLeadingZeroBits()
-    val vn = IntArray(n)
-    for (i in n - 1 downTo 1) {
-        vn[i] = (v[i] shl s) or v[i - 1].carryRight(s)
-    }
-    vn[0] = v[0] shl s
+    // The divisor is at least 2^64, so the quotient fits in a ULong. Estimate it from the top word of the normalised
+    // divisor and half the dividend, which keeps the estimate from overflowing; it's then exact or one too small.
+    val n = divisor.upper.countLeadingZeroBits()
+    val divisorTop = if (n == 0) divisor.upper else (divisor.upper shl n) or (divisor.lower shr (ULong.SIZE_BITS - n))
+    val halfUpper = dividend.upper shr 1
+    val halfLower = (dividend.lower shr 1) or (dividend.upper shl (ULong.SIZE_BITS - 1))
+    var quotient = divideWide(halfUpper, halfLower, divisorTop) shr (ULong.SIZE_BITS - 1 - n)
+    if (quotient != 0uL) quotient--
 
-    val un = IntArray(m + 1)
-    un[m] = u[m - 1].carryRight(s)
-    for (i in m - 1 downTo 1) {
-        un[i] = (u[i] shl s) or u[i - 1].carryRight(s)
-    }
-    un[0] = u[0] shl s
+    // remainder = dividend - quotient * divisor
+    val productLower = quotient * divisor.lower
+    val productUpper = uint64MultiplyHigh(quotient, divisor.lower) + quotient * divisor.upper
+    var remainderLower = dividend.lower - productLower
+    var remainderUpper = dividend.upper - productUpper - (if (dividend.lower < productLower) 1uL else 0uL)
 
-    val base = 1uL shl LIMB_BITS
-    val vTop = vn[n - 1].toULimb()
-    val vNext = vn[n - 2].toULimb()
-
-    for (j in m - n downTo 0) {
-        // Estimate the quotient digit and correct it if it's too large
-        val numerator = (un[j + n].toULimb() shl LIMB_BITS) or un[j + n - 1].toULimb()
-        var qHat = numerator / vTop
-        var rHat = numerator - qHat * vTop
-        while (qHat >= base || qHat * vNext > ((rHat shl LIMB_BITS) or un[j + n - 2].toULimb())) {
-            qHat--
-            rHat += vTop
-            if (rHat >= base) break
-        }
-
-        // Multiply and subtract
-        var borrow = 0L
-        var t: Long
-        for (i in 0 until n) {
-            val p = qHat * vn[i].toULimb()
-            t = un[i + j].toULimb().toLong() - borrow - (p and LIMB_MASK).toLong()
-            un[i + j] = t.toInt()
-            borrow = (p shr LIMB_BITS).toLong() - (t shr LIMB_BITS)
-        }
-        t = un[j + n].toULimb().toLong() - borrow
-        un[j + n] = t.toInt()
-
-        q[j] = qHat.toInt()
-        if (t < 0) {
-            // The estimate was one too large, so add the divisor back
-            q[j]--
-            var carry = 0L
-            for (i in 0 until n) {
-                t = un[i + j].toULimb().toLong() + vn[i].toULimb().toLong() + carry
-                un[i + j] = t.toInt()
-                carry = t ushr LIMB_BITS
-            }
-            un[j + n] += carry.toInt()
-        }
+    if (remainderUpper > divisor.upper || (remainderUpper == divisor.upper && remainderLower >= divisor.lower)) {
+        quotient++
+        val borrow = if (remainderLower < divisor.lower) 1uL else 0uL
+        remainderLower -= divisor.lower
+        remainderUpper = remainderUpper - divisor.upper - borrow
     }
 
-    if (!remainder) return q.toUInt128()
-
-    // Denormalise the remainder
-    val r = IntArray(LIMB_COUNT)
-    for (i in 0 until n) {
-        r[i] = (un[i] ushr s) or un[i + 1].carryLeft(s)
-    }
-    return r.toUInt128()
+    return if (remainder) UInt128(remainderUpper, remainderLower) else UInt128(0uL, quotient)
 }
 
-private fun Int.toULimb(): ULong = toUInt().toULong()
+/**
+ * Returns the quotient of the 128-bit value ([high], [low]) divided by [divisor], which must be greater than [high]
+ * so the quotient fits in a ULong. Knuth's Algorithm D on 32-bit halves (Hacker's Delight, 2nd ed., figure 9-3).
+ */
+private fun divideWide(high: ULong, low: ULong, divisor: ULong): ULong {
+    // Normalise so the divisor's top bit is set, guarding against `shr 64` being a no-op
+    val s = divisor.countLeadingZeroBits()
+    val v = divisor shl s
+    val v1 = v shr HALF_BITS
+    val v0 = v and HALF_MASK
+    val u32 = if (s == 0) high else (high shl s) or (low shr (ULong.SIZE_BITS - s))
+    val u10 = low shl s
+    val u1 = u10 shr HALF_BITS
+    val u0 = u10 and HALF_MASK
 
-/** The bits shifted out of the top of this limb by `shl s`, guarding against `ushr 32` being a no-op. */
-private fun Int.carryRight(s: Int): Int = if (s == 0) 0 else this ushr (LIMB_BITS - s)
+    // Estimate each 32-bit quotient digit from the top digit of the divisor, then correct it if it's too large
+    var q1 = uint64Divide(u32, v1)
+    var rHat = u32 - q1 * v1
+    while (q1 > HALF_MASK || q1 * v0 > ((rHat shl HALF_BITS) or u1)) {
+        q1--
+        rHat += v1
+        if (rHat > HALF_MASK) break
+    }
 
-/** The bits shifted out of the bottom of this limb by `ushr s`, guarding against `shl 32` being a no-op. */
-private fun Int.carryLeft(s: Int): Int = if (s == 0) 0 else this shl (LIMB_BITS - s)
+    val u21 = (u32 shl HALF_BITS) + u1 - q1 * v
+    var q0 = uint64Divide(u21, v1)
+    rHat = u21 - q0 * v1
+    while (q0 > HALF_MASK || q0 * v0 > ((rHat shl HALF_BITS) or u0)) {
+        q0--
+        rHat += v1
+        if (rHat > HALF_MASK) break
+    }
 
-/** Little-endian 32-bit limbs. */
-private fun UInt128.toLimbs(): IntArray = intArrayOf(low.toInt(), midLow.toInt(), midHigh.toInt(), high.toInt())
-
-private fun IntArray.toUInt128(): UInt128 = UInt128(this[3].toUInt(), this[2].toUInt(), this[1].toUInt(), this[0].toUInt())
+    return (q1 shl HALF_BITS) or q0
+}
 
 internal fun uint128Shl(v: UInt128, bitCount: Int): UInt128 {
     val n = bitCount and (UInt128.SIZE_BITS - 1)

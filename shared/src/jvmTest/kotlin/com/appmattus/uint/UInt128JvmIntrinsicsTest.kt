@@ -36,7 +36,7 @@ class UInt128JvmIntrinsicsTest {
     fun unsignedMultiplyHighMatchesBigIntegerForEdgeValues() {
         edges.forEach { x ->
             edges.forEach { y ->
-                assertEquals(expectedHigh(x, y), unsignedMultiplyHigh(x, y), "$x * $y")
+                assertEquals(expectedHigh(x, y), uint64MultiplyHigh(x, y), "$x * $y")
             }
         }
     }
@@ -46,7 +46,7 @@ class UInt128JvmIntrinsicsTest {
         repeat(10_000) {
             val x = random.nextULong()
             val y = random.nextULong()
-            assertEquals(expectedHigh(x, y), unsignedMultiplyHigh(x, y), "$x * $y")
+            assertEquals(expectedHigh(x, y), uint64MultiplyHigh(x, y), "$x * $y")
         }
     }
 }
