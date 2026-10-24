@@ -52,6 +52,39 @@ class UInt128BigIntegerFuzzTest {
     }
 
     @Test
+    fun scalars() = fuzz { a, b ->
+        val ab = a.toBigInteger()
+        // Small scalars hit the single-word paths, and zero checks the division by zero errors
+        val l = when (b.lower % 4uL) {
+            0uL -> b.lower
+            1uL -> b.lower shr 32
+            2uL -> b.lower and 0xFFu
+            else -> 0uL
+        }
+        val lb = BigInteger(l.toString())
+        val ub = BigInteger(l.toUInt().toString())
+
+        check("plus ULong", a, b, { a + l }, { (ab + lb).toUInt128Wrapped() })
+        check("minus ULong", a, b, { a - l }, { (ab - lb).toUInt128Wrapped() })
+        check("times ULong", a, b, { a * l }, { (ab * lb).toUInt128Wrapped() })
+        check("div ULong", a, b, { a / l }, { (ab / lb).toUInt128Wrapped() })
+        check("rem ULong", a, b, { a % l }, { (ab % lb).toUInt128Wrapped() })
+        check("mod ULong", a, b, { a.mod(l) }, { (ab % lb).toLong().toULong() })
+        check("floorDiv ULong", a, b, { a.floorDiv(l) }, { (ab / lb).toUInt128Wrapped() })
+        check("compareTo ULong", a, b, { a.compareTo(l).coerceIn(-1, 1) }, { ab.compareTo(lb) })
+
+        check("plus UInt", a, b, { a + l.toUInt() }, { (ab + ub).toUInt128Wrapped() })
+        check("minus UInt", a, b, { a - l.toUInt() }, { (ab - ub).toUInt128Wrapped() })
+        check("times UInt", a, b, { a * l.toUInt() }, { (ab * ub).toUInt128Wrapped() })
+        check("div UInt", a, b, { a / l.toUInt() }, { (ab / ub).toUInt128Wrapped() })
+        check("rem UInt", a, b, { a % l.toUInt() }, { (ab % ub).toUInt128Wrapped() })
+        check("mod UInt", a, b, { a.mod(l.toUInt()) }, { (ab % ub).toInt().toUInt() })
+        check("mod UShort", a, b, { a.mod(l.toUShort()) }, { (ab % BigInteger(l.toUShort().toString())).toInt().toUShort() })
+        check("mod UByte", a, b, { a.mod(l.toUByte()) }, { (ab % BigInteger(l.toUByte().toString())).toInt().toUByte() })
+        check("compareTo UInt", a, b, { a.compareTo(l.toUInt()).coerceIn(-1, 1) }, { ab.compareTo(ub) })
+    }
+
+    @Test
     fun comparison() = fuzz { a, b ->
         val ab = a.toBigInteger()
         val bb = b.toBigInteger()

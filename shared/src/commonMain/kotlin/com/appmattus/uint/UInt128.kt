@@ -66,28 +66,28 @@ public class UInt128(
      * Returns zero if this value is equal to the specified other value, a negative number if it's less than other,
      * or a positive number if it's greater than other.
      */
-    public inline operator fun compareTo(other: UByte): Int = compareTo(other.toUInt128())
+    public inline operator fun compareTo(other: UByte): Int = compareTo(other.toULong())
 
     /**
      * Compares this value with the specified value for order.
      * Returns zero if this value is equal to the specified other value, a negative number if it's less than other,
      * or a positive number if it's greater than other.
      */
-    public inline operator fun compareTo(other: UShort): Int = compareTo(other.toUInt128())
+    public inline operator fun compareTo(other: UShort): Int = compareTo(other.toULong())
 
     /**
      * Compares this value with the specified value for order.
      * Returns zero if this value is equal to the specified other value, a negative number if it's less than other,
      * or a positive number if it's greater than other.
      */
-    public inline operator fun compareTo(other: UInt): Int = compareTo(other.toUInt128())
+    public inline operator fun compareTo(other: UInt): Int = compareTo(other.toULong())
 
     /**
      * Compares this value with the specified value for order.
      * Returns zero if this value is equal to the specified other value, a negative number if it's less than other,
      * or a positive number if it's greater than other.
      */
-    public inline operator fun compareTo(other: ULong): Int = compareTo(other.toUInt128())
+    public inline operator fun compareTo(other: ULong): Int = uint128CompareULong(this, other)
 
     /**
      * Compares this value with the specified value for order.
@@ -97,61 +97,61 @@ public class UInt128(
     public override fun compareTo(other: UInt128): Int = uint128Compare(this, other)
 
     /** Adds the [other] value to this value. */
-    public inline operator fun plus(other: UByte): UInt128 = plus(other.toUInt128())
+    public inline operator fun plus(other: UByte): UInt128 = plus(other.toULong())
 
     /** Adds the [other] value to this value. */
-    public inline operator fun plus(other: UShort): UInt128 = plus(other.toUInt128())
+    public inline operator fun plus(other: UShort): UInt128 = plus(other.toULong())
 
     /** Adds the [other] value to this value. */
-    public inline operator fun plus(other: UInt): UInt128 = plus(other.toUInt128())
+    public inline operator fun plus(other: UInt): UInt128 = plus(other.toULong())
 
     /** Adds the [other] value to this value. */
-    public inline operator fun plus(other: ULong): UInt128 = plus(other.toUInt128())
+    public inline operator fun plus(other: ULong): UInt128 = uint128PlusULong(this, other)
 
     /** Adds the [other] value to this value. */
     public operator fun plus(other: UInt128): UInt128 = uint128Plus(this, other)
 
     /** Subtracts the [other] value from this value. */
-    public inline operator fun minus(other: UByte): UInt128 = minus(other.toUInt128())
+    public inline operator fun minus(other: UByte): UInt128 = minus(other.toULong())
 
     /** Subtracts the [other] value from this value. */
-    public inline operator fun minus(other: UShort): UInt128 = minus(other.toUInt128())
+    public inline operator fun minus(other: UShort): UInt128 = minus(other.toULong())
 
     /** Subtracts the [other] value from this value. */
-    public inline operator fun minus(other: UInt): UInt128 = minus(other.toUInt128())
+    public inline operator fun minus(other: UInt): UInt128 = minus(other.toULong())
 
     /** Subtracts the [other] value from this value. */
-    public inline operator fun minus(other: ULong): UInt128 = minus(other.toUInt128())
+    public inline operator fun minus(other: ULong): UInt128 = uint128MinusULong(this, other)
 
     /** Subtracts the [other] value from this value. */
     public operator fun minus(other: UInt128): UInt128 = uint128Minus(this, other)
 
     /** Multiplies this value by the other value. */
-    public inline operator fun times(other: UByte): UInt128 = times(other.toUInt128())
+    public inline operator fun times(other: UByte): UInt128 = times(other.toULong())
 
     /** Multiplies this value by the other value. */
-    public inline operator fun times(other: UShort): UInt128 = times(other.toUInt128())
+    public inline operator fun times(other: UShort): UInt128 = times(other.toULong())
 
     /** Multiplies this value by the other value. */
-    public inline operator fun times(other: UInt): UInt128 = times(other.toUInt128())
+    public inline operator fun times(other: UInt): UInt128 = times(other.toULong())
 
     /** Multiplies this value by the other value. */
-    public inline operator fun times(other: ULong): UInt128 = times(other.toUInt128())
+    public inline operator fun times(other: ULong): UInt128 = uint128TimesULong(this, other)
 
     /** Multiplies this value by the [other] value. */
     public operator fun times(other: UInt128): UInt128 = uint128Times(this, other)
 
     /** Divides this value by the [other] value, truncating the result to an integer that is closer to zero. */
-    public inline operator fun div(other: UByte): UInt128 = div(other.toUInt128())
+    public inline operator fun div(other: UByte): UInt128 = div(other.toULong())
 
     /** Divides this value by the [other] value, truncating the result to an integer that is closer to zero. */
-    public inline operator fun div(other: UShort): UInt128 = div(other.toUInt128())
+    public inline operator fun div(other: UShort): UInt128 = div(other.toULong())
 
     /** Divides this value by the [other] value, truncating the result to an integer that is closer to zero. */
-    public inline operator fun div(other: UInt): UInt128 = div(other.toUInt128())
+    public inline operator fun div(other: UInt): UInt128 = div(other.toULong())
 
     /** Divides this value by the [other] value, truncating the result to an integer that is closer to zero. */
-    public inline operator fun div(other: ULong): UInt128 = div(other.toUInt128())
+    public inline operator fun div(other: ULong): UInt128 = uint128DivULong(this, other)
 
     /** Divides this value by the [other] value, truncating the result to an integer that is closer to zero. */
     public operator fun div(other: UInt128): UInt128 = uint128Div(this, other)
@@ -161,28 +161,28 @@ public class UInt128(
      *
      * The result is always less than the divisor.
      */
-    public inline operator fun rem(other: UByte): UInt128 = rem(other.toUInt128())
+    public inline operator fun rem(other: UByte): UInt128 = rem(other.toULong())
 
     /**
      * Calculates the remainder of truncating division of this value by the [other] value.
      *
      * The result is always less than the divisor.
      */
-    public inline operator fun rem(other: UShort): UInt128 = rem(other.toUInt128())
+    public inline operator fun rem(other: UShort): UInt128 = rem(other.toULong())
 
     /**
      * Calculates the remainder of truncating division of this value by the [other] value.
      *
      * The result is always less than the divisor.
      */
-    public inline operator fun rem(other: UInt): UInt128 = rem(other.toUInt128())
+    public inline operator fun rem(other: UInt): UInt128 = rem(other.toULong())
 
     /**
      * Calculates the remainder of truncating division of this value by the [other] value.
      *
      * The result is always less than the divisor.
      */
-    public inline operator fun rem(other: ULong): UInt128 = rem(other.toUInt128())
+    public inline operator fun rem(other: ULong): UInt128 = UInt128(0uL, uint128RemULong(this, other))
 
     /**
      * Calculates the remainder of truncating division of this value by the [other] value.
@@ -196,28 +196,28 @@ public class UInt128(
      *
      * For unsigned types, the results of flooring division and truncating division are the same.
      */
-    public inline fun floorDiv(other: UByte): UInt128 = floorDiv(other.toUInt128())
+    public inline fun floorDiv(other: UByte): UInt128 = div(other)
 
     /**
      * Divides this value by the [other] value, flooring the result to an integer that is closer to negative infinity.
      *
      * For unsigned types, the results of flooring division and truncating division are the same.
      */
-    public inline fun floorDiv(other: UShort): UInt128 = floorDiv(other.toUInt128())
+    public inline fun floorDiv(other: UShort): UInt128 = div(other)
 
     /**
      * Divides this value by the [other] value, flooring the result to an integer that is closer to negative infinity.
      *
      * For unsigned types, the results of flooring division and truncating division are the same.
      */
-    public inline fun floorDiv(other: UInt): UInt128 = floorDiv(other.toUInt128())
+    public inline fun floorDiv(other: UInt): UInt128 = div(other)
 
     /**
      * Divides this value by the [other] value, flooring the result to an integer that is closer to negative infinity.
      *
      * For unsigned types, the results of flooring division and truncating division are the same.
      */
-    public inline fun floorDiv(other: ULong): UInt128 = floorDiv(other.toUInt128())
+    public inline fun floorDiv(other: ULong): UInt128 = div(other)
 
     /**
      * Divides this value by the [other] value, flooring the result to an integer that is closer to negative infinity.
@@ -233,7 +233,7 @@ public class UInt128(
      *
      * For unsigned types, the remainders of flooring division and truncating division are the same.
      */
-    public inline fun mod(other: UByte): UByte = mod(other.toUInt128()).toUByte()
+    public inline fun mod(other: UByte): UByte = uint128RemULong(this, other.toULong()).toUByte()
 
     /**
      * Calculates the remainder of flooring division of this value by the [other] value.
@@ -242,7 +242,7 @@ public class UInt128(
      *
      * For unsigned types, the remainders of flooring division and truncating division are the same.
      */
-    public inline fun mod(other: UShort): UShort = mod(other.toUInt128()).toUShort()
+    public inline fun mod(other: UShort): UShort = uint128RemULong(this, other.toULong()).toUShort()
 
     /**
      * Calculates the remainder of flooring division of this value by the [other] value.
@@ -251,7 +251,7 @@ public class UInt128(
      *
      * For unsigned types, the remainders of flooring division and truncating division are the same.
      */
-    public inline fun mod(other: UInt): UInt = mod(other.toUInt128()).toUInt()
+    public inline fun mod(other: UInt): UInt = uint128RemULong(this, other.toULong()).toUInt()
 
     /**
      * Calculates the remainder of flooring division of this value by the [other] value.
@@ -260,7 +260,7 @@ public class UInt128(
      *
      * For unsigned types, the remainders of flooring division and truncating division are the same.
      */
-    public inline fun mod(other: ULong): ULong = mod(other.toUInt128()).toULong()
+    public inline fun mod(other: ULong): ULong = uint128RemULong(this, other)
 
     /**
      * Calculates the remainder of flooring division of this value by the [other] value.
