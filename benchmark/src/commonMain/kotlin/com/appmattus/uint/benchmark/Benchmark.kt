@@ -17,6 +17,7 @@
 package com.appmattus.uint.benchmark
 
 import com.appmattus.uint.UInt128
+import com.appmattus.uint.isqrt
 import com.appmattus.uint.pow
 import com.appmattus.uint.toUInt128
 import kotlin.random.Random
@@ -45,6 +46,8 @@ private val benchmarks: List<Pair<String, (Int) -> Unit>> = listOf(
     "div 128/128" to { i -> sink += (wide[i] / (wide[i xor 1] shr 7)).lower },
     "rem 128/32" to { i -> sink += (wide[i] % small[i]).lower },
     "pow(3)" to { i -> sink += narrow[i].pow(3).upper },
+    "isqrt 128" to { i -> sink += wide[i].isqrt().lower },
+    "isqrt 64" to { i -> sink += narrow[i].isqrt().lower },
     "toString()" to { i -> sink += wide[i].toString().length.toULong() },
     "String.toUInt128()" to { i -> sink += strings[i].toUInt128().lower },
     "plus ULong" to { i -> sink += (wide[i] + narrow[i].lower).lower },

@@ -17,7 +17,6 @@
 package com.appmattus.uint
 
 import com.appmattus.uint.UInt128.Companion.ONE
-import com.appmattus.uint.UInt128.Companion.ZERO
 
 /**
  * Raises this value to the integer power [n]
@@ -43,21 +42,4 @@ public fun UInt128.pow(n: Int): UInt128 {
 /**
  * Get the floor value of the exact square root of this
  */
-public fun UInt128.isqrt(): UInt128 {
-    var opr: UInt128 = this
-    var res = ZERO
-    var one: UInt128 = ONE shl (UInt128.SIZE_BITS - 2)
-    while (one > opr) {
-        one = one shr 2
-    }
-    while (one != ZERO) {
-        if (opr >= res + one) {
-            opr -= res + one
-            res = (res shr 1) + one
-        } else {
-            res = res shr 1
-        }
-        one = one shr 2
-    }
-    return res
-}
+public fun UInt128.isqrt(): UInt128 = UInt128(0uL, uint128Isqrt(this))

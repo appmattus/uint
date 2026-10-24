@@ -15,6 +15,8 @@
  */
 package com.appmattus.uint
 
+import kotlin.math.sqrt
+
 private const val HALF_MASK: ULong = 0xFFFFFFFFu
 private const val HALF_BITS: Int = UInt.SIZE_BITS
 
@@ -174,6 +176,41 @@ internal fun uint128RemULong(dividend: UInt128, divisor: ULong): ULong {
     val lowerQuotient = divideWide(dividend.upper - upperQuotient * divisor, dividend.lower, divisor)
     // The remainder is below the divisor, so only its lower word survives the wrapping subtraction
     return dividend.lower - lowerQuotient * divisor
+}
+
+private const val TWO_POW_64: Double = 18446744073709551616.0
+
+/** Returns the floor of the square root of [v], which always fits in a [ULong]. */
+internal fun uint128Isqrt(v: UInt128): ULong {
+    if (v.upper == 0uL) return uint64Isqrt(v.lower)
+
+    // A Double estimate is within about 2^11 of the root. One Newton step, (r + v / r) / 2, brings that within one,
+    // and never below the root, as the arithmetic mean of r and v / r is at least their geometric mean.
+    val estimate = sqrt(v.upper.toDouble() * TWO_POW_64 + v.lower.toDouble()).toULong()
+    val upperQuotient = uint64Divide(v.upper, estimate)
+    val lowerQuotient = divideWide(v.upper - upperQuotient * estimate, v.lower, estimate)
+    val sumLower = lowerQuotient + estimate
+    val sumUpper = upperQuotient + if (sumLower < estimate) 1uL else 0uL
+    // The step can reach 2^64 near the top of the range, where the root is ULong.MAX_VALUE
+    var root = if (sumUpper > 1uL) ULong.MAX_VALUE else (sumLower shr 1) or (sumUpper shl (ULong.SIZE_BITS - 1))
+
+    while (squareExceeds(root, v)) root--
+    return root
+}
+
+/** Returns the floor of the square root of [v]. */
+private fun uint64Isqrt(v: ULong): ULong {
+    // A Double estimate is within one of the root, but can be either side of it. Clamping keeps root * root in range.
+    var root = sqrt(v.toDouble()).toULong().coerceAtMost(UInt.MAX_VALUE.toULong())
+    while (root * root > v) root--
+    while (root < UInt.MAX_VALUE.toULong() && (root + 1uL) * (root + 1uL) <= v) root++
+    return root
+}
+
+/** Returns whether [root] squared is greater than [v]. */
+private fun squareExceeds(root: ULong, v: UInt128): Boolean {
+    val upper = uint64MultiplyHigh(root, root)
+    return upper > v.upper || (upper == v.upper && root * root > v.lower)
 }
 
 /**
