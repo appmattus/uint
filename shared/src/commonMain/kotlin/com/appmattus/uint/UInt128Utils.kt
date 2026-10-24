@@ -100,7 +100,8 @@ private fun uint128DivRem(dividend: UInt128, divisor: UInt128, remainder: Boolea
  */
 private fun uint128DivRemWords(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 {
     if (divisor.upper == 0uL) {
-        // Divide the upper word first, leaving a remainder below the divisor so the second step can't overflow
+        // Divide the upper word first, leaving a remainder below the divisor so the second step can't overflow. This
+        // repeats uint128DivULong rather than calling it, as the extra call depth stops JDK 11 inlining divideWide.
         val d = divisor.lower
         val upperQuotient = uint64Divide(dividend.upper, d)
         val lowerQuotient = divideWide(dividend.upper - upperQuotient * d, dividend.lower, d)
@@ -131,6 +132,48 @@ private fun uint128DivRemWords(dividend: UInt128, divisor: UInt128, remainder: B
     }
 
     return if (remainder) UInt128(remainderUpper, remainderLower) else UInt128(0uL, quotient)
+}
+
+// The scalar operators are inline, so these are published for them to call. Each works on the scalar directly rather
+// than widening it to a UInt128 first, saving an allocation and the arithmetic on its zero upper word.
+
+@PublishedApi
+internal fun uint128CompareULong(v: UInt128, other: ULong): Int = if (v.upper != 0uL) 1 else v.lower.compareTo(other)
+
+@PublishedApi
+internal fun uint128PlusULong(v: UInt128, other: ULong): UInt128 {
+    val lower = v.lower + other
+    val carry = if (lower < other) 1uL else 0uL
+    return UInt128(v.upper + carry, lower)
+}
+
+@PublishedApi
+internal fun uint128MinusULong(v: UInt128, other: ULong): UInt128 {
+    val borrow = if (v.lower < other) 1uL else 0uL
+    return UInt128(v.upper - borrow, v.lower - other)
+}
+
+@PublishedApi
+internal fun uint128TimesULong(v: UInt128, other: ULong): UInt128 =
+    UInt128(uint64MultiplyHigh(v.lower, other) + v.upper * other, v.lower * other)
+
+@PublishedApi
+internal fun uint128DivULong(dividend: UInt128, divisor: ULong): UInt128 {
+    if (divisor == 0uL) throw ArithmeticException("/ by zero")
+    if (dividend.upper == 0uL) return UInt128(0uL, uint64Divide(dividend.lower, divisor))
+    // Divide the upper word first, leaving a remainder below the divisor so the second step can't overflow
+    val upperQuotient = uint64Divide(dividend.upper, divisor)
+    return UInt128(upperQuotient, divideWide(dividend.upper - upperQuotient * divisor, dividend.lower, divisor))
+}
+
+@PublishedApi
+internal fun uint128RemULong(dividend: UInt128, divisor: ULong): ULong {
+    if (divisor == 0uL) throw ArithmeticException("/ by zero")
+    if (dividend.upper == 0uL) return uint64Remainder(dividend.lower, divisor)
+    val upperQuotient = uint64Divide(dividend.upper, divisor)
+    val lowerQuotient = divideWide(dividend.upper - upperQuotient * divisor, dividend.lower, divisor)
+    // The remainder is below the divisor, so only its lower word survives the wrapping subtraction
+    return dividend.lower - lowerQuotient * divisor
 }
 
 /**

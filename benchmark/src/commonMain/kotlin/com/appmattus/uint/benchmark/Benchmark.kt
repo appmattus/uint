@@ -47,6 +47,14 @@ private val benchmarks: List<Pair<String, (Int) -> Unit>> = listOf(
     "pow(3)" to { i -> sink += narrow[i].pow(3).upper },
     "toString()" to { i -> sink += wide[i].toString().length.toULong() },
     "String.toUInt128()" to { i -> sink += strings[i].toUInt128().lower },
+    "plus ULong" to { i -> sink += (wide[i] + narrow[i].lower).lower },
+    "minus UInt" to { i -> sink += (wide[i] - small[i].lower.toUInt()).lower },
+    "times ULong" to { i -> sink += (wide[i] * narrow[i].lower).upper },
+    "div ULong" to { i -> sink += (wide[i] / narrow[i].lower).lower },
+    "rem UInt" to { i -> sink += (wide[i] % small[i].lower.toUInt()).lower },
+    "mod UInt" to { i -> sink += wide[i].mod(small[i].lower.toUInt()).toULong() },
+    "compareTo ULong" to { i -> sink += narrow[i].compareTo(narrow[i xor 1].lower).toULong() },
+    "inc" to { i -> sink += wide[i].inc().lower },
 )
 
 /** Returns the best nanoseconds per operation over the measured rounds. */
