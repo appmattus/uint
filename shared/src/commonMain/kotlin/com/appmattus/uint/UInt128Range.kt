@@ -38,7 +38,7 @@ public class UInt128Range(start: UInt128, endInclusive: UInt128) : UInt128Progre
                 first == other.first && last == other.last)
 
     override fun hashCode(): Int =
-        if (isEmpty()) -1 else (31 * (first xor (first shr 32)).toInt() + (last xor (last shr 32)).toInt())
+        if (isEmpty()) -1 else (31 * first.hashCode() + last.hashCode())
 
     override fun toString(): String = "$first..$last"
 
@@ -94,7 +94,7 @@ public open class UInt128Progression internal constructor(
     override fun hashCode(): Int = if (isEmpty()) {
         -1
     } else {
-        (31 * (31 * (first xor (first shr 32)).toInt() + (last xor (last shr 32)).toInt()) + (step xor (step ushr 32)).toInt())
+        (31 * (31 * first.hashCode() + last.hashCode()) + (step xor (step ushr 32)).toInt())
     }
 
     override fun toString(): String = if (step > 0) "$first..$last step $step" else "$first downTo $last step ${-step}"
@@ -122,7 +122,7 @@ public open class UInt128Progression internal constructor(
 private class UInt128ProgressionIterator(first: UInt128, last: UInt128, step: Long) : UInt128Iterator() {
     private val finalElement = last
     private var hasNext: Boolean = if (step > 0) first <= last else first >= last
-    private val step = step.toULong() // use 2-complement math for negative steps
+    private val step = step.toUInt128() // use 2-complement math for negative steps
     private var next = if (hasNext) first else finalElement
 
     override fun hasNext(): Boolean = hasNext

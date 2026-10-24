@@ -21,7 +21,7 @@ import com.appmattus.uint.UInt128.Companion.ONE
 import com.appmattus.uint.UInt128.Companion.ZERO
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
+import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 
 class UInt128Test {
@@ -130,7 +130,7 @@ class UInt128Test {
         assertEquals((12345678L / 13L).toUInt128(), 12345678uL.toUInt128() / 13uL.toUInt128())
 
         // division by zero
-        assertFails { 1.toUInt128() / 0.toUInt128() }
+        assertFailsWith<ArithmeticException> { 1.toUInt128() / 0.toUInt128() }
 
         // Numbers
         assertEquals(MAX_VALUE, MAX_VALUE / 1u.toUByte())
@@ -158,7 +158,7 @@ class UInt128Test {
         assertEquals(ZERO, UInt128(0xfedcba9876543210u, 0u) % valueMod)
         assertEquals((12345678L % 13L).toUInt128(), 12345678L.toUInt128() % 13L.toUInt128())
 
-        assertFails { ONE % ZERO }
+        assertFailsWith<ArithmeticException> { ONE % ZERO }
 
         // Numbers
         assertEquals(ZERO, MAX_VALUE % 1u.toUByte())
@@ -191,7 +191,7 @@ class UInt128Test {
         assertEquals((12345678L.floorDiv(13L)).toUInt128(), 12345678uL.toUInt128().floorDiv(13uL.toUInt128()))
 
         // division by zero
-        assertFails { 1.toUInt128().floorDiv(0.toUInt128()) }
+        assertFailsWith<ArithmeticException> { 1.toUInt128().floorDiv(0.toUInt128()) }
 
         // Numbers
         assertEquals(MAX_VALUE, MAX_VALUE.floorDiv(1u.toUByte()))
@@ -219,7 +219,7 @@ class UInt128Test {
         assertEquals(0uL, UInt128(0xfedcba9876543210u, 0u).mod(valueMod))
         assertEquals((12345678L % 13L).toUInt128(), 12345678L.toUInt128().mod(13L.toUInt128()))
 
-        assertFails { ONE.mod(ZERO) }
+        assertFailsWith<ArithmeticException> { ONE.mod(ZERO) }
 
         // Numbers
         assertEquals(0u, MAX_VALUE.mod(1u.toUByte()))
@@ -254,9 +254,12 @@ class UInt128Test {
         assertEquals(UInt128(ULong.MAX_VALUE, ULong.MAX_VALUE - 1u), MAX_VALUE shl 1)
         assertEquals(UInt128(0uL, 2uL), ONE shl 1)
         assertEquals(UInt128(1uL, 0uL), UInt128(0uL, (1uL shl (ULong.SIZE_BITS - 1))) shl 1)
-        assertEquals(ZERO, ONE shl UInt128.SIZE_BITS)
-        assertEquals(ZERO, ONE shl -UInt128.SIZE_BITS)
-        assertEquals(ONE, 2u.toUInt128() shl -1)
+        // Only the seven lowest-order bits of the shift distance are used, matching ULong
+        assertEquals(ONE, ONE shl UInt128.SIZE_BITS)
+        assertEquals(ONE, ONE shl -UInt128.SIZE_BITS)
+        assertEquals(ONE shl 1, ONE shl (UInt128.SIZE_BITS + 1))
+        assertEquals(ONE shl 127, ONE shl -1)
+        assertEquals(ZERO, 2u.toUInt128() shl -1)
 
         for (i in 0 until 64) {
             assertEquals((1uL shl i).toUInt128(), ONE shl i)
@@ -279,9 +282,12 @@ class UInt128Test {
         assertEquals(ZERO, ONE shr 1)
         assertEquals(ONE, UInt128(0uL, 2uL) shr 1)
         assertEquals(UInt128(0uL, 0x8000000000000000uL), UInt128(1uL, 0uL) shr 1)
-        assertEquals(ZERO, highBit shr UInt128.SIZE_BITS)
-        assertEquals(ZERO, highBit shr -UInt128.SIZE_BITS)
-        assertEquals(2u.toUInt128(), ONE shr -1)
+        // Only the seven lowest-order bits of the shift distance are used, matching ULong
+        assertEquals(highBit, highBit shr UInt128.SIZE_BITS)
+        assertEquals(highBit, highBit shr -UInt128.SIZE_BITS)
+        assertEquals(highBit shr 1, highBit shr (UInt128.SIZE_BITS + 1))
+        assertEquals(ONE, highBit shr -1)
+        assertEquals(ZERO, ONE shr -1)
 
         val value = ULong.MAX_VALUE.toUInt128()
         for (i in 0 until 64) {
