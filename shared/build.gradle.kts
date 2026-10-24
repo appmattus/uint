@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -18,6 +19,54 @@ kotlin {
         }
     }
 
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_1_8)
+        }
+    }
+
+    js {
+        browser()
+        nodejs()
+        binaries.executable()
+    }
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        nodejs()
+    }
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmWasi {
+        nodejs()
+    }
+
+    // Tier 1
+    // Apple macOS hosts only:
+    macosArm64()
+    iosSimulatorArm64()
+    iosX64()
+
+    // Tier 2
+    linuxX64()
+    linuxArm64()
+    // Apple macOS hosts only:
+    watchosSimulatorArm64()
+    watchosArm32()
+    watchosArm64()
+    tvosSimulatorArm64()
+    tvosArm64()
+    iosArm64()
+
+    // Tier 3
+    androidNativeArm32()
+    androidNativeArm64()
+    androidNativeX86()
+    androidNativeX64()
+    mingwX64()
+    // Apple macOS hosts only:
+    watchosDeviceArm64()
+
     listOf(
         iosX64(),
         iosArm64(),
@@ -26,12 +75,6 @@ kotlin {
         it.binaries.framework {
             baseName = "shared"
         }
-    }
-
-    js {
-        browser()
-        nodejs()
-        binaries.executable()
     }
 
     sourceSets {
