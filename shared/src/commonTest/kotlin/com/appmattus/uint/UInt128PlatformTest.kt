@@ -20,6 +20,7 @@ import kotlin.random.Random
 import kotlin.random.nextULong
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 class UInt128PlatformTest {
 
@@ -33,11 +34,11 @@ class UInt128PlatformTest {
     }
 
     @Test
-    fun timesMatchesPortableImplementation() {
+    fun multiplyHighMatchesPortableImplementation() {
         repeat(10_000) {
-            val a = randomUInt128()
-            val b = randomUInt128()
-            assertMatches(uint128TimesPortable(a, b), uint128Times(a, b)) { "$a * $b" }
+            val x = random.nextULong()
+            val y = random.nextULong()
+            assertMatches(uint64MultiplyHighPortable(x, y), uint64MultiplyHigh(x, y)) { "$x * $y" }
         }
     }
 
@@ -51,6 +52,23 @@ class UInt128PlatformTest {
             val b = minOf(x, y)
             assertMatches(uint128DivRemPortable(a, b, false), uint128PlatformDivRem(a, b, false)) { "$a / $b" }
             assertMatches(uint128DivRemPortable(a, b, true), uint128PlatformDivRem(a, b, true)) { "$a % $b" }
+        }
+    }
+
+    @Test
+    fun divRemSatisfiesDivisionIdentity() {
+        repeat(10_000) {
+            // Dividends just either side of a multiple of the divisor exercise the quotient estimate's corrections
+            val b = randomUInt128().takeIf { it != UInt128.ZERO } ?: UInt128.ONE
+            val multiple = b * randomUInt128()
+            val a = when (random.nextInt(3)) {
+                0 -> multiple
+                1 -> multiple - UInt128.ONE
+                else -> multiple + random.nextULong(16uL)
+            }
+            val q = a / b
+            val r = a % b
+            if (r >= b || q * b + r != a) fail("$a / $b = $q remainder $r")
         }
     }
 

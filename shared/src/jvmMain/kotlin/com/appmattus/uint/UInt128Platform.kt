@@ -16,18 +16,11 @@
 
 package com.appmattus.uint
 
-// HotSpot compiles Math.multiplyHigh to a single high-multiply instruction (smulh on arm64, imul on x86-64)
-internal actual fun uint128Times(v1: UInt128, v2: UInt128): UInt128 {
-    // The cross terms only contribute to the upper word, so their overflow can be discarded
-    val high = unsignedMultiplyHigh(v1.lower, v2.lower) + v1.lower * v2.upper + v1.upper * v2.lower
-    return UInt128(high, v1.lower * v2.lower)
-}
-
 /**
- * Returns the upper 64 bits of the unsigned 128-bit product of [x] and [y], correcting the signed result of
- * [Math.multiplyHigh] for operands with their top bit set, as Java 18's Math.unsignedMultiplyHigh does.
+ * HotSpot compiles [Math.multiplyHigh] to a single high-multiply instruction (smulh on arm64, imul on x86-64). Its
+ * signed result is corrected for operands with their top bit set, as Java 18's Math.unsignedMultiplyHigh does.
  */
-internal fun unsignedMultiplyHigh(x: ULong, y: ULong): ULong {
+internal actual fun uint64MultiplyHigh(x: ULong, y: ULong): ULong {
     val sx = x.toLong()
     val sy = y.toLong()
     return (Math.multiplyHigh(sx, sy) + ((sx shr 63) and sy) + ((sy shr 63) and sx)).toULong()
@@ -36,3 +29,31 @@ internal fun unsignedMultiplyHigh(x: ULong, y: ULong): ULong {
 // There's no JVM intrinsic for 128-bit division, and 64-bit division already compiles to Long.divideUnsigned
 internal actual fun uint128PlatformDivRem(dividend: UInt128, divisor: UInt128, remainder: Boolean): UInt128 =
     uint128DivRemPortable(dividend, divisor, remainder)
+
+// Kotlin compiles ULong division to Long.divideUnsigned, which before Java 17 falls back to BigInteger whenever the
+// dividend has its top bit set. Being a static final, the JIT folds this check away.
+private val hasFastDivideUnsigned: Boolean = Runtime.version().feature() >= 17
+
+internal actual fun uint64Divide(dividend: ULong, divisor: ULong): ULong =
+    if (hasFastDivideUnsigned) dividend / divisor else divideUnsignedWithoutBigInteger(dividend, divisor)
+
+internal actual fun uint64Remainder(dividend: ULong, divisor: ULong): ULong =
+    if (hasFastDivideUnsigned) {
+        dividend % divisor
+    } else {
+        dividend - divideUnsignedWithoutBigInteger(dividend, divisor) * divisor
+    }
+
+/**
+ * Unsigned division using only signed division, as Java 17's Long.divideUnsigned does: halve the dividend so it's
+ * non-negative, then correct the doubled quotient, which is at most one too small (Hacker's Delight, 2nd ed., 9-3).
+ */
+internal fun divideUnsignedWithoutBigInteger(dividend: ULong, divisor: ULong): ULong {
+    val d = divisor.toLong()
+    if (d < 0L) return if (dividend < divisor) 0uL else 1uL
+    val n = dividend.toLong()
+    if (n >= 0L) return (n / d).toULong()
+    val quotient = ((n ushr 1) / d) shl 1
+    val remainder = n - quotient * d
+    return (quotient + if (remainder.toULong() >= divisor) 1L else 0L).toULong()
+}

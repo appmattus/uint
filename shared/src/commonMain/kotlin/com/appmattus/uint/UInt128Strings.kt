@@ -46,14 +46,14 @@ public fun UInt128.toString(radix: Int): String {
     var lo = lower
     while (hi != 0uL) {
         var r = hi shr UInt.SIZE_BITS
-        val q3 = r / chunkDivisor
-        r = ((r % chunkDivisor) shl UInt.SIZE_BITS) or (hi and UInt.MAX_VALUE.toULong())
-        val q2 = r / chunkDivisor
-        r = ((r % chunkDivisor) shl UInt.SIZE_BITS) or (lo shr UInt.SIZE_BITS)
-        val q1 = r / chunkDivisor
-        r = ((r % chunkDivisor) shl UInt.SIZE_BITS) or (lo and UInt.MAX_VALUE.toULong())
-        val q0 = r / chunkDivisor
-        chunks += (r % chunkDivisor).toString(radix).padStart(chunkDigits, '0')
+        val q3 = uint64Divide(r, chunkDivisor)
+        r = ((r - q3 * chunkDivisor) shl UInt.SIZE_BITS) or (hi and UInt.MAX_VALUE.toULong())
+        val q2 = uint64Divide(r, chunkDivisor)
+        r = ((r - q2 * chunkDivisor) shl UInt.SIZE_BITS) or (lo shr UInt.SIZE_BITS)
+        val q1 = uint64Divide(r, chunkDivisor)
+        r = ((r - q1 * chunkDivisor) shl UInt.SIZE_BITS) or (lo and UInt.MAX_VALUE.toULong())
+        val q0 = uint64Divide(r, chunkDivisor)
+        chunks += (r - q0 * chunkDivisor).toString(radix).padStart(chunkDigits, '0')
         hi = (q3 shl UInt.SIZE_BITS) or q2
         lo = (q1 shl UInt.SIZE_BITS) or q0
     }
@@ -89,7 +89,7 @@ public inline fun String.toUInt128OrNull(): UInt128? = toUInt128OrNull(radix = 1
  *
  * @throws IllegalArgumentException when [radix] is not a valid radix for string to number conversion.
  */
-@Suppress("NestedBlockDepth", "ReturnCount")
+@Suppress("ReturnCount")
 public fun String.toUInt128OrNull(radix: Int): UInt128? {
     if (radix < UInt128.MIN_RADIX || radix > UInt128.MAX_RADIX) {
         throw IllegalArgumentException("Illegal radix: $radix")
@@ -97,7 +97,6 @@ public fun String.toUInt128OrNull(radix: Int): UInt128? {
 
     if (this.isEmpty()) return null
 
-    val limit: UInt128 = UInt128.MAX_VALUE
     val start: Int
 
     val firstChar = this[0]
@@ -108,31 +107,47 @@ public fun String.toUInt128OrNull(radix: Int): UInt128? {
         start = 0
     }
 
-    val limitForMaxRadix = limit / UInt128.MAX_RADIX.toUInt128() //  9452287970026068429538183539771339207  //  limit / 36
-
-    var limitBeforeMul = limitForMaxRadix
-    val uradix = radix.toUInt128()
-    var result = UInt128.ZERO
-    for (i in start until this.length) {
-        val digit = this[i].digitToIntOrNull(radix) ?: return null
-        if (result > limitBeforeMul) {
-            if (limitBeforeMul == limitForMaxRadix) {
-                limitBeforeMul = limit / uradix
-
-                if (result > limitBeforeMul) {
-                    return null
-                }
-            } else {
-                return null
-            }
+    // Accumulate as many digits as fit in a ULong, then fold each chunk into the result with a single multiply-add
+    val uradix = radix.toULong()
+    val chunkDigits = parseChunkDigits[radix]
+    var upper = 0uL
+    var lower = 0uL
+    var i = start
+    while (i < this.length) {
+        val end = minOf(i + chunkDigits, this.length)
+        var chunk = 0uL
+        var multiplier = 1uL
+        while (i < end) {
+            val digit = this[i++].digitToIntOrNull(radix) ?: return null
+            chunk = chunk * uradix + digit.toULong()
+            multiplier *= uradix
         }
 
-        result *= uradix
-
-        val beforeAdding = result
-        result += digit.toUInt128()
-        if (result < beforeAdding) return null // overflow has happened
+        // (upper, lower) * multiplier + chunk, returning null if the result doesn't fit in 128 bits
+        if (uint64MultiplyHigh(upper, multiplier) != 0uL) return null
+        val upperProduct = upper * multiplier
+        val lowerProduct = lower * multiplier
+        upper = upperProduct + uint64MultiplyHigh(lower, multiplier)
+        if (upper < upperProduct) return null
+        lower = lowerProduct + chunk
+        if (lower < lowerProduct) {
+            upper++
+            if (upper == 0uL) return null
+        }
     }
 
-    return result
+    return UInt128(upper, lower)
+}
+
+/** The most digits of each radix, indexed by radix, whose value and place multiplier always fit in a [ULong]. */
+private val parseChunkDigits = IntArray(UInt128.MAX_RADIX + 1) { radix ->
+    var digits = 0
+    if (radix >= UInt128.MIN_RADIX) {
+        var multiplier = 1uL
+        while (multiplier <= ULong.MAX_VALUE / radix.toULong()) {
+            multiplier *= radix.toULong()
+            digits++
+        }
+    }
+    digits
 }

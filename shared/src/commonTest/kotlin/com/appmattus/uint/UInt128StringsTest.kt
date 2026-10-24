@@ -114,4 +114,28 @@ class UInt128StringsTest {
                 .toUInt128OrNull(2)
         )
     }
+
+    @Test
+    fun parsesMaxValueInEveryRadix() {
+        for (radix in UInt128.MIN_RADIX..UInt128.MAX_RADIX) {
+            val max = UInt128.MAX_VALUE.toString(radix)
+            assertEquals(UInt128.MAX_VALUE, max.toUInt128(radix), "radix $radix")
+            // One more digit always overflows in the multiply
+            assertNull((max + "0").toUInt128OrNull(radix), "radix $radix")
+        }
+    }
+
+    @Test
+    fun rejectsMaxValuePlusOne() {
+        // Overflows in the final add rather than the multiply
+        assertNull("340282366920938463463374607431768211456".toUInt128OrNull())
+        assertNull("100000000000000000000000000000000".toUInt128OrNull(16))
+    }
+
+    @Test
+    fun parsesLeadingZerosSpanningSeveralChunks() {
+        assertEquals(expected, ("0".repeat(100) + expected.toString()).toUInt128())
+        assertEquals(UInt128.ZERO, "0".repeat(200).toUInt128(2))
+        assertEquals(UInt128.MAX_VALUE, ("+" + "0".repeat(50) + UInt128.MAX_VALUE.toString(36)).toUInt128(36))
+    }
 }
