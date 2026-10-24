@@ -56,10 +56,10 @@ public class UInt128(
         midLow.toULong() shl UInt.SIZE_BITS or low.toULong()
     )
 
-    internal val high: UInt = (upper shr UInt.SIZE_BITS).toUInt()
-    internal val midHigh: UInt = upper.toUInt()
-    internal val midLow: UInt = (lower shr UInt.SIZE_BITS).toUInt()
-    internal val low: UInt = lower.toUInt()
+    internal val high: UInt get() = (upper shr UInt.SIZE_BITS).toUInt()
+    internal val midHigh: UInt get() = upper.toUInt()
+    internal val midLow: UInt get() = (lower shr UInt.SIZE_BITS).toUInt()
+    internal val low: UInt get() = lower.toUInt()
 
     /**
      * Compares this value with the specified value for order.
@@ -124,7 +124,7 @@ public class UInt128(
     public inline operator fun minus(other: ULong): UInt128 = minus(other.toUInt128())
 
     /** Subtracts the [other] value from this value. */
-    public operator fun minus(other: UInt128): UInt128 = this + other.inv() + ONE
+    public operator fun minus(other: UInt128): UInt128 = uint128Minus(this, other)
 
     /** Multiplies this value by the other value. */
     public inline operator fun times(other: UByte): UInt128 = times(other.toUInt128())
@@ -154,7 +154,7 @@ public class UInt128(
     public inline operator fun div(other: ULong): UInt128 = div(other.toUInt128())
 
     /** Divides this value by the [other] value, truncating the result to an integer that is closer to zero. */
-    public operator fun div(other: UInt128): UInt128 = uint128DivMod(this, other).first
+    public operator fun div(other: UInt128): UInt128 = uint128Div(this, other)
 
     /**
      * Calculates the remainder of truncating division of this value by the [other] value.
@@ -189,7 +189,7 @@ public class UInt128(
      *
      * The result is always less than the divisor.
      */
-    public operator fun rem(other: UInt128): UInt128 = uint128DivMod(this, other).second
+    public operator fun rem(other: UInt128): UInt128 = uint128Rem(this, other)
 
     /**
      * Divides this value by the [other] value, flooring the result to an integer that is closer to negative infinity.
@@ -312,7 +312,7 @@ public class UInt128(
     public operator fun unaryPlus(): UInt128 = this
 
     /** Returns the negative of this value. */
-    public operator fun unaryMinus(): UInt128 = inv() + ONE
+    public operator fun unaryMinus(): UInt128 = ZERO - this
 
     /**
      * Converts this [UInt128] value to [Byte].
@@ -412,7 +412,7 @@ public class UInt128(
         return false
     }
 
-    override fun hashCode(): Int = (high * 31u + midHigh * 23u + midLow * 13u + low).toInt()
+    override fun hashCode(): Int = 31 * upper.hashCode() + lower.hashCode()
 
     override fun toString(): String = toString(10)
 }

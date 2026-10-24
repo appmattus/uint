@@ -23,23 +23,45 @@ package com.appmattus.uint
  */
 @Suppress("ExceptionRaisedInUnexpectedLocation")
 public fun UInt128.toString(radix: Int): String {
-    val chars = "0123456789abcdefghijklmnopqrstuvwxyz"
     if (radix < UInt128.MIN_RADIX || radix > UInt128.MAX_RADIX) {
         throw IllegalArgumentException("Illegal radix: $radix")
     }
 
-    if (this == UInt128.ZERO) {
-        return "0"
+    if (upper == 0uL) {
+        return lower.toString(radix)
     }
 
-    val out = StringBuilder()
-    var qr = Pair(this, UInt128.ZERO)
-    do {
-        qr = uint128DivMod(qr.first, radix.toUInt128())
-        out.append(chars[qr.second.toInt()])
-    } while (qr.first != UInt128.ZERO)
+    // Peel off chunks of digits using the largest power of the radix that fits in 32 bits, so each step is a cheap
+    // short division, until the remaining value fits in a ULong
+    val uradix = radix.toULong()
+    var chunkDivisor = uradix
+    var chunkDigits = 1
+    while (chunkDivisor * uradix <= UInt.MAX_VALUE) {
+        chunkDivisor *= uradix
+        chunkDigits++
+    }
 
-    return out.reverse().toString()
+    val chunks = mutableListOf<String>()
+    var hi = upper
+    var lo = lower
+    while (hi != 0uL) {
+        var r = hi shr UInt.SIZE_BITS
+        val q3 = r / chunkDivisor
+        r = ((r % chunkDivisor) shl UInt.SIZE_BITS) or (hi and UInt.MAX_VALUE.toULong())
+        val q2 = r / chunkDivisor
+        r = ((r % chunkDivisor) shl UInt.SIZE_BITS) or (lo shr UInt.SIZE_BITS)
+        val q1 = r / chunkDivisor
+        r = ((r % chunkDivisor) shl UInt.SIZE_BITS) or (lo and UInt.MAX_VALUE.toULong())
+        val q0 = r / chunkDivisor
+        chunks += (r % chunkDivisor).toString(radix).padStart(chunkDigits, '0')
+        hi = (q3 shl UInt.SIZE_BITS) or q2
+        lo = (q1 shl UInt.SIZE_BITS) or q0
+    }
+
+    return buildString {
+        append(lo.toString(radix))
+        for (i in chunks.indices.reversed()) append(chunks[i])
+    }
 }
 
 /**
@@ -56,20 +78,19 @@ public fun String.toUInt128(): UInt128 = toUInt128OrNull() ?: throw NumberFormat
 public fun String.toUInt128(radix: Int): UInt128 = toUInt128OrNull(radix) ?: throw NumberFormatException("Invalid number format: '$this'")
 
 /**
- * Parses the string as an [ULong] number and returns the result
+ * Parses the string as a [UInt128] number and returns the result
  * or `null` if the string is not a valid representation of a number.
  */
 public inline fun String.toUInt128OrNull(): UInt128? = toUInt128OrNull(radix = 10)
 
 /**
- * Parses the string as an [ULong] number and returns the result
+ * Parses the string as a [UInt128] number and returns the result
  * or `null` if the string is not a valid representation of a number.
  *
  * @throws IllegalArgumentException when [radix] is not a valid radix for string to number conversion.
  */
 @Suppress("NestedBlockDepth", "ReturnCount")
 public fun String.toUInt128OrNull(radix: Int): UInt128? {
-    val chars = "0123456789abcdefghijklmnopqrstuvwxyz"
     if (radix < UInt128.MIN_RADIX || radix > UInt128.MAX_RADIX) {
         throw IllegalArgumentException("Illegal radix: $radix")
     }
@@ -93,8 +114,7 @@ public fun String.toUInt128OrNull(radix: Int): UInt128? {
     val uradix = radix.toUInt128()
     var result = UInt128.ZERO
     for (i in start until this.length) {
-        val digit = chars.indexOf(this[i])
-        if (digit < 0 || digit >= radix) return null
+        val digit = this[i].digitToIntOrNull(radix) ?: return null
         if (result > limitBeforeMul) {
             if (limitBeforeMul == limitForMaxRadix) {
                 limitBeforeMul = limit / uradix
