@@ -1,7 +1,6 @@
 plugins {
-    //trick: for the same plugin versions in all sub-modules
-    kotlin("multiplatform").version("2.4.21").apply(false)
-    id("com.vanniktech.maven.publish").version("0.37.0").apply(false)
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.gradleMavenPublishPlugin) apply false
 }
 
 subprojects {

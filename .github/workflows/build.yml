@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'gradle.properties') }}
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
 
       # Targets the host can't build (e.g. iOS on Linux/Windows) are skipped automatically
@@ -62,7 +62,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'gradle.properties') }}
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
 
       - name: Prepare tag properties
