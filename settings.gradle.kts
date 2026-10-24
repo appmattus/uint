@@ -12,5 +12,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "UInt"
-include(":shared")
+include(":uint128")
+include(":uint256")
 include(":benchmark")
